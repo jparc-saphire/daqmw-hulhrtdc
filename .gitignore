@@ -1,0 +1,63 @@
+# Compiled binaries
+*.o
+*.so
+*.so.*
+*.a
+*.d
+
+# DAQ component executables
+component/BestEffortDispatcher/BestEffortDispatcherComp
+component/DAQLogger/DAQLoggerComp
+component/Merger/MergerComp
+component/Monitor/MonitorComp
+component/MznHRTdcReader1/MznHRTdcReader1Comp
+
+# Build artifacts in autogen
+component/*/autogen/*.cc
+component/*/autogen/*.hh
+component/*/autogen/*.cpp
+component/*/autogen/*.h
+component/*/autogen/*.o
+component/*/autogen/DAQService.idl
+
+# Dependency files
+.depend
+
+# ROOT analysis build artifacts
+Analyzer/**/*.so
+Analyzer/**/*.pcm
+Analyzer/**/*.d
+
+# DAQ runtime files
+omninames-*.dat
+omninames-*.bak
+omninames-*.log
+daq_work/omninames-*.log
+daq-mw-app/daq_work/omninames-*.log
+rtc.conf
+*.conf
+
+# Backup/temp files
+*~
+*.bak
+
+# Data files (large)
+data/
+*.root
+*.gif
+
+# util shared libraries (built from source)
+daq-mw-app/util/*.so
+daq-mw-app/util/*.so.*
+daq-mw-app/util/*.d
+
+# Claude settings
+.claude/
+
+# confFilePath runtime file
+.confFilePath
+daq_work/.confFilePath
+daq-mw-app/daq_work/.confFilePath
+
+# worklog
+worklog/

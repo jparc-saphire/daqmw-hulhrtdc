@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<!-- DON'T REMOVE THE ABOVE LINE.                                     -->
+<!-- DON'T PUT ANY LINES ABOVE THE 1ST LINE.                          -->
+<!-- config.xml to run -->
+<!-- 1. MznHRTdcReader1 -->
+<!-- 2. Monitor -->
+<!-- 3. BestEffortDispatcher -->
+<!-- 4. Logger  -->
+<!-- Please rewrite execPath (2 places), confFile (2 places) suitable -->
+<!-- for your directory structure.                                    -->
+<!-- run.py will create rtc.conf in /tmp/daqmw/rtc.conf               -->
+<!-- If you use run.py, set confFile as /tmp/daqmw/rtc.conf           -->
+<configInfo>
+    <daqOperator>
+        <hostAddr>127.0.0.1</hostAddr>
+    </daqOperator>
+    <daqGroups>
+        <daqGroup gid="group0">
+            <components>
+                <!--Reader-->
+                <component cid="MznHRTdcReader10">
+                    <hostAddr>127.0.0.1</hostAddr>
+                    <hostPort>50000</hostPort>
+                     <instName>MznHRTdcReader10.rtc</instName>
+                     <execPath>/home/mrpcdaq/work/201908_HRTDC/daq-mw-app/component/MznHRTdcReader1/MznHRTdcReader1Comp</execPath>
+                      <confFile>/tmp/daqmw/rtc.conf</confFile>
+                      <startOrd>5</startOrd>
+                      <inPorts>
+                      </inPorts>
+                      <outPorts>
+                          <outPort>out0</outPort>
+                      </outPorts>
+                      <params>
+                          <param pid="timeout">200</param>
+                          <param pid="debug">0</param>
+			  <!--<param pid="srcAddr">192.168.34.16</param>-->
+                          <param pid="srcAddr">192.168.10.21</param>
+			  <!--<param pid="srcAddr">192.168.10.16</param>-->
+                          <param pid="srcPort">24</param>
+                          <param pid="boardId">0xC0A8013A</param>
+                          <param pid="window_max">330</param>   
+                          <param pid="window_min">0</param>
+                          <param pid="en_up">1</param>
+                          <param pid="en_down">1</param>
+                     </params>
+                </component>
+                <!--Reader end-->
+                <component cid="Merger0">
+                   <hostAddr>127.0.0.1</hostAddr>
+                   <hostPort>50000</hostPort>
+                   <instName>Merger0.rtc</instName>
+                   <execPath>/home/mrpcdaq/work/201908_HRTDC/daq-mw-app/component/Merger/MergerComp</execPath>
+                   <confFile>/tmp/daqmw/rtc.conf</confFile>
+                   <startOrd>4</startOrd>
+                   <inPorts>
+                     <inPort from="MznHRTdcReader10:out0">in0</inPort>
+                   </inPorts>
+                   <outPorts>
+                     <outPort>out</outPort>
+                   </outPorts>
+                   <params>
+                        <param pid="debug">no</param>
+                   </params>
+                </component>
+                <component cid="BestEffortDispatcher0">
+                   <hostAddr>127.0.0.1</hostAddr>
+                   <hostPort>50000</hostPort>
+                   <instName>BestEffortDispatcher0.rtc</instName>
+                   <execPath>/home/mrpcdaq/work/201908_HRTDC/daq-mw-app/component/BestEffortDispatcher/BestEffortDispatcherComp</execPath>
+                   <confFile>/tmp/daqmw/rtc.conf</confFile>
+                   <startOrd>3</startOrd>
+                   <inPorts>
+                     <inPort from="Merger0:out">in</inPort>
+                   </inPorts>
+                   <outPorts>
+                     <outPort>out</outPort><!--standard type to Logger -->
+                     <outPort>best_effort_out</outPort><!--best effort type to Monitor -->
+                   </outPorts>
+                   <params>
+                        <param pid="verbosity">20</param>
+                   </params>
+                </component>
+                <component cid="Monitor0">
+                    <hostAddr>127.0.0.1</hostAddr>
+                    <hostPort>50000</hostPort>
+                    <instName>Monitor0.rtc</instName>
+                    <execPath>/home/mrpcdaq/work/201908_HRTDC/daq-mw-app/component/Monitor/MonitorComp</execPath>
+                    <confFile>/tmp/daqmw/rtc.conf</confFile>
+                    <startOrd>2</startOrd>
+                    <inPorts>
+                        <inPort from="BestEffortDispatcher0:best_effort_out"
+                        buffer_length="4096"
+                        >in0</inPort>
+                    </inPorts>
+                    <outPorts>
+                    </outPorts>
+                    <params>
+                        <param pid="verbosity">0</param>
+                        <param pid="update_cycle">100</param>
+                        <param pid="canupdate_cycle">100</param>
+                        <param pid="server0">http:192.168.10.3:8888;monitoring=500</param>
+                    </params>
+                </component>
+                <component cid="DAQLogger0">
+                    <hostAddr>127.0.0.1</hostAddr>
+                    <hostPort>50000</hostPort>
+                    <instName>DAQLogger0.rtc</instName>
+                    <execPath>/home/mrpcdaq/work/201908_HRTDC/daq-mw-app/component/DAQLogger/DAQLoggerComp</execPath>
+                    <confFile>/tmp/daqmw/rtc.conf</confFile>
+                    <startOrd>1</startOrd>
+                    <inPorts>
+                       <inPort from="BestEffortDispatcher0:out">in0</inPort>
+                    </inPorts>
+                    <outPorts>
+                    </outPorts>
+                    <params>
+                       <param pid="dirName">/home/mrpcdaq/work/201908_HRTDC/data/dat_20200402</param>
+                       <param pid="isLogging">yes</param>
+                       <param pid="maxFileSizeInMegaByte">81920</param>
+                    </params>
+                </component>
+            </components>
+        </daqGroup>
+    </daqGroups>
+</configInfo>

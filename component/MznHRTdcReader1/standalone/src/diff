@@ -1,0 +1,37 @@
+3d2
+< #include <iomanip>
+13,14c12
+< //static const int NofData = NofHead + 2048;
+< static const int NofData = NofHead + 2 + 16*64 + 16*64;
+---
+> static const int NofData = NofHead + 2048;
+46,48c44
+< ddr_initialize(FPGAModule& fModule, 
+< 	       bool enUp,
+< 	       bool enDown)
+---
+> ddr_initialize(FPGAModule& fModule)
+50,53c46,47
+<   // unsigned int reg_enable_up   = en_up   ? HRTDC_BASE::DCT::reg_enable_u : 0;
+<   // unsigned int reg_enable_down = en_down ? HRTDC_BASE::DCT::reg_enable_d : 0;
+<   unsigned int reg_enable_up   = enUp   ? HRTDC_BASE::DCT::reg_enable_u : 0;
+<   unsigned int reg_enable_down = enDown ? HRTDC_BASE::DCT::reg_enable_d : 0;
+---
+>   unsigned int reg_enable_up   = en_up   ? HRTDC_BASE::DCT::reg_enable_u : 0;
+>   unsigned int reg_enable_down = en_down ? HRTDC_BASE::DCT::reg_enable_d : 0;
+280d273
+<   //std::cout << "#D Event_Cycle" << std::endl;
+284,285d276
+< 
+<   //std::cout << " recv header = " << ret << " " << sizeHeader << std::endl;
+290,299d280
+< 
+<   if (buffer[0] != 0xffff800b) {
+<     std::cout << " Data broken : " << std::endl;
+<   }
+< 
+< 
+<   // for (int i=0; i<NofHead; ++i) {
+<   //   std::cout << std::hex << buffer[i] << std::dec << std::endl;
+<   // }
+<   // std::cout << "nword = " << n_word_data << std::endl;

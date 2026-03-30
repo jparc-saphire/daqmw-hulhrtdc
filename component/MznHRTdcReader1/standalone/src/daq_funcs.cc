@@ -1,0 +1,344 @@
+#include"daq_funcs.hh"
+
+#include <iomanip>
+#include<fstream>
+#include<cstdlib>
+#include"mif_func.hh"
+
+using namespace HRTDC_BASE;
+
+int user_stop = 0;
+
+static const int NofHead = 3;
+//static const int NofData = NofHead + 2048;
+static const int NofData = NofHead + 2 + 16*64 + 16*64;
+
+static const int print_step = 100;
+#define COMPRESS 1
+
+// signal -----------------------------------------------------------------
+void
+UserStop_FromCtrlC(int signal)
+{
+  std::cout << "Stop request" << std::endl;
+  user_stop = 1;
+}
+
+// set_tdc_window ---------------------------------------------------------
+void
+set_tdc_window(unsigned int wmax, unsigned int wmin, FPGAModule& fModule, unsigned int mif_id)
+{
+  static const unsigned int c_max       = 2047;
+  static const unsigned int ptr_diff_wr = 2;
+
+  unsigned int ptr_ofs            = c_max - wmax + ptr_diff_wr;
+
+  WriteMIFModule(fModule, mif_id,
+    		 HRTDC_MZN::TDC::mid, HRTDC_MZN::TDC::laddr_ptrofs, ptr_ofs, 2);
+  WriteMIFModule(fModule, mif_id,
+    		 HRTDC_MZN::TDC::mid, HRTDC_MZN::TDC::laddr_win_max, wmax, 2);
+  WriteMIFModule(fModule, mif_id,
+    		 HRTDC_MZN::TDC::mid, HRTDC_MZN::TDC::laddr_win_min, wmin, 2);
+}
+
+// ddr_initialize --------------------------------------------------------
+void
+ddr_initialize(FPGAModule& fModule, 
+	       bool enUp,
+	       bool enDown)
+{
+  // unsigned int reg_enable_up   = en_up   ? HRTDC_BASE::DCT::reg_enable_u : 0;
+  // unsigned int reg_enable_down = en_down ? HRTDC_BASE::DCT::reg_enable_d : 0;
+  unsigned int reg_enable_up   = enUp   ? HRTDC_BASE::DCT::reg_enable_u : 0;
+  unsigned int reg_enable_down = enDown ? HRTDC_BASE::DCT::reg_enable_d : 0;
+
+  std::cout << "#D : Do DDR initialize" << std::endl;
+  // MZN
+  if(enUp){
+    WriteMIFModule(fModule, MIFU::mid,
+		   HRTDC_MZN::DCT::mid,
+		   HRTDC_MZN::DCT::laddr_test_mode, 1, 1 );
+  }
+
+  if(enDown){
+    WriteMIFModule(fModule, MIFD::mid,
+		   HRTDC_MZN::DCT::mid,
+		   HRTDC_MZN::DCT::laddr_test_mode, 1, 1 );
+  }
+
+  unsigned int reg =
+    reg_enable_up   |
+    reg_enable_down |
+    HRTDC_BASE::DCT::reg_test_mode_u |
+    HRTDC_BASE::DCT::reg_test_mode_d;
+
+  // Base
+  fModule.WriteModule(HRTDC_BASE::DCT::mid, 
+   		      HRTDC_BASE::DCT::laddr_ctrl_reg, reg);
+
+  fModule.WriteModule(HRTDC_BASE::DCT::mid, 
+  		      HRTDC_BASE::DCT::laddr_init_ddr, 0);
+
+  unsigned int ret = fModule.ReadModule(HRTDC_BASE::DCT::mid, HRTDC_BASE::DCT::laddr_rcv_status, 1);
+
+  // std::cout << "en_up = " << enUp << std::endl;
+  // std::cout << "en_down = " << enDown << std::endl;
+
+  if(enUp){
+    if( ret & HRTDC_BASE::DCT::reg_bit_aligned_u){
+      std::cout << "#D : DDR initialize succeeded (MZN-U)" << std::endl;
+    }else{
+      std::cout << "#E : Failed (MZN-U)" << std::endl;
+      exit(-1);
+    }
+  }// bit aligned ?
+
+  if(enDown){
+    if( ret & HRTDC_BASE::DCT::reg_bit_aligned_d){
+      std::cout << "#D : DDR initialize succeeded (MZN-D)" << std::endl;
+    }else{
+      std::cout << "#E : Failed (MZN-D)" << std::endl;
+      exit(-1);
+    }
+  }// bit aligned ?
+
+  // Set DAQ mode
+   
+  if(enUp){
+    WriteMIFModule(fModule, MIFU::mid,
+		   HRTDC_MZN::DCT::mid,
+		   HRTDC_MZN::DCT::laddr_test_mode, 0, 1 );
+
+  }
+ 
+  if(enDown){
+    WriteMIFModule(fModule, MIFD::mid,
+		   HRTDC_MZN::DCT::mid,
+		   HRTDC_MZN::DCT::laddr_test_mode, 0, 1 );
+  }
+
+  reg = reg_enable_up | reg_enable_down;
+  fModule.WriteModule(HRTDC_BASE::DCT::mid, 
+   		      HRTDC_BASE::DCT::laddr_ctrl_reg, reg);
+  
+}// ddr_initialize
+
+// CalibLUT ---------------------------------------------------------------
+void
+CalibLUT(FPGAModule& fModule, unsigned int mif_id)
+{
+  WriteMIFModule(fModule, mif_id, 
+		 HRTDC_MZN::DCT::mid, HRTDC_MZN::DCT::laddr_extra_path, 1, 1);
+
+  while(!(ReadMIFModule(fModule, mif_id, HRTDC_MZN::TDC::mid, HRTDC_MZN::TDC::laddr_status, 1) & HRTDC_MZN::TDC::reg_ready_lut)){
+    sleep(1);
+    std::cout << "#D waiting LUT ready" << std::endl;
+  }// while
+
+  if((int)mif_id == MIFU::mid){
+    std::cout << "#D LUT is ready! (MIF-U)" << std::endl;
+  }else{
+    std::cout << "#D LUT is ready! (MIF-D)" << std::endl;
+  }
+
+  WriteMIFModule(fModule, mif_id,
+		 HRTDC_MZN::DCT::mid, HRTDC_MZN::DCT::laddr_extra_path, 0, 1);
+  WriteMIFModule(fModule, mif_id,
+		 HRTDC_MZN::TDC::mid, HRTDC_MZN::TDC::laddr_req_switch, 1, 1);
+}
+
+// execute daq ------------------------------------------------------------
+void
+daq(char* ip, rbcp_header *rbcpHeader, int runno, int eventno)
+{
+  (void) signal(SIGINT, UserStop_FromCtrlC);
+
+  // TCP socket
+  int sock;
+  if(-1 == (sock = ConnectSocket((const char*)ip))) return;
+  std::cout << "socket connected" << std::endl;
+
+  // Set search windows
+  unsigned int window_max         = 2047;
+  unsigned int window_min         = 0;
+
+  FPGAModule fModule(ip, udp_port, rbcpHeader, 0);  
+  if(en_up)   set_tdc_window(window_max, window_min, fModule, MIFU::mid);
+  if(en_down) set_tdc_window(window_max, window_min, fModule, MIFD::mid);
+
+  // unset extra path
+  //  fModule.WriteModule(DCT::mid, DCT::laddr_extra_path, 0);
+
+  // evb reset
+  fModule.WriteModule(DCT::mid, DCT::laddr_evb_reset, 0);
+
+  // set sel trig
+  unsigned int sel_trig = TRM::reg_L1Ext;
+  //unsigned int sel_trig = TRM::reg_L1J0 | TRM::reg_L2J0 | TRM::reg_EnJ0 | TRM::reg_EnL2;
+  fModule.WriteModule(TRM::mid, TRM::laddr_sel_trig,  sel_trig);
+
+  //  unsigned int tdc_ctrl = HRTDC_MZN::TDC::reg_through | HRTDC_MZN::TDC::reg_stop_dout;
+  //  unsigned int tdc_ctrl = HRTDC_MZN::TDC::reg_stop_dout;
+  //  unsigned int tdc_ctrl = HRTDC_MZN::TDC::reg_autosw;
+
+  unsigned int tdc_ctrl = 0;
+
+  if(en_up){
+    WriteMIFModule(fModule, MIFU::mid,
+		   HRTDC_MZN::TDC::mid, HRTDC_MZN::TDC::laddr_controll, tdc_ctrl, 1);
+    WriteMIFModule(fModule, MIFU::mid,
+		   HRTDC_MZN::DCT::mid, HRTDC_MZN::DCT::laddr_gate, 1, 1);    
+  }
+
+  if(en_down ){
+    WriteMIFModule(fModule, MIFD::mid,
+		   HRTDC_MZN::TDC::mid, HRTDC_MZN::TDC::laddr_controll, tdc_ctrl, 1);
+    WriteMIFModule(fModule, MIFD::mid,
+		   HRTDC_MZN::DCT::mid, HRTDC_MZN::DCT::laddr_gate, 1, 1);
+  } 
+
+  // Start DAQ
+  fModule.WriteModule(HRTDC_BASE::DCT::mid, HRTDC_BASE::DCT::laddr_gate,  1);
+
+  char filename[256];
+  sprintf(filename, "data/run%d.dat", runno);
+
+  std::ofstream ofs(filename, std::ios::binary);
+
+  std::cout << "Start DAQ" << std::endl;
+  // DAQ Cycle
+  unsigned int buf[NofData];
+  for(int n = 0; n<eventno; ++n){
+    int n_word;
+    while( -1 == ( n_word = Event_Cycle(sock, buf)) && !user_stop) continue;
+    if(user_stop) break;
+    ofs.write((char*)buf, n_word*sizeof(unsigned int));
+
+    if(n%print_step==0){
+      printf("\033[2J");
+      printf("Event %d\n", n);
+      for(int i = 0; i<n_word; ++i){
+	printf("%8x ", buf[i]);
+	if((i+1)%8 == 0) printf("\n");
+      }// for(i)
+
+      printf("\n");
+    }
+
+  }// For(n)
+
+  fModule.WriteModule(HRTDC_BASE::DCT::mid, HRTDC_BASE::DCT::laddr_gate,  0);
+
+  if(en_up){
+    WriteMIFModule(fModule, MIFU::mid,
+		   HRTDC_MZN::DCT::mid, HRTDC_MZN::DCT::laddr_gate, 0, 1);
+  }
+
+  if(en_down){
+    WriteMIFModule(fModule, MIFD::mid,
+		   HRTDC_MZN::DCT::mid, HRTDC_MZN::DCT::laddr_gate, 0, 1);  
+  }
+
+  sleep(1);
+  while(-1 != Event_Cycle(sock, buf));
+
+  //  shutdown(sock, SHUT_RDWR);
+  close(sock);
+  ofs.close();
+
+  return;
+}
+
+// ConnectSocket ----------------------------------------------------------
+int
+ConnectSocket(const char* ip)
+{
+  struct sockaddr_in SiTCP_ADDR;
+  unsigned int port = 24;
+
+  int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  SiTCP_ADDR.sin_family      = AF_INET;
+  SiTCP_ADDR.sin_port        = htons((unsigned short int) port);
+  SiTCP_ADDR.sin_addr.s_addr = inet_addr(ip);
+
+  struct timeval tv;
+  tv.tv_sec  = 3;
+  tv.tv_usec = 0;
+  setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv));
+
+  int flag = 1;
+  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag));
+
+  if(0 > connect(sock, (struct sockaddr*)&SiTCP_ADDR, sizeof(SiTCP_ADDR))){
+    std::cerr << "#E : TCP connection error" << std::endl;
+    close(sock);
+    return -1;
+  }
+  
+  return sock;
+}
+
+// Event Cycle ------------------------------------------------------------
+int
+Event_Cycle(int sock, unsigned int* buffer)
+{
+  //std::cout << "#D Event_Cycle" << std::endl;
+  // data read ---------------------------------------------------------
+  static const unsigned int sizeHeader = NofHead*sizeof(unsigned int);
+  int ret = receive(sock, (char*)buffer, sizeHeader);
+
+  //std::cout << " recv header = " << ret << " " << sizeHeader << std::endl;
+  if(ret < 0) return -1;
+
+  unsigned int n_word_data  = buffer[1] & 0x3ff;
+  unsigned int sizeData     = n_word_data*sizeof(unsigned int);
+
+  if (buffer[0] != 0xffff800b) {
+    std::cout << " Data broken : " << std::endl;
+  }
+
+
+  // for (int i=0; i<NofHead; ++i) {
+  //   std::cout << std::hex << buffer[i] << std::dec << std::endl;
+  // }
+  // std::cout << "nword = " << n_word_data << std::endl;
+  
+  if(n_word_data == 0) return NofHead;
+
+  ret = receive(sock, (char*)(buffer + NofHead), sizeData);
+  if(ret < 0) return -1;
+  
+  return NofHead+ n_word_data;
+}
+
+// receive ----------------------------------------------------------------
+int
+receive(int sock, char* data_buf, unsigned int length)
+{
+  unsigned int revd_size = 0;
+  int tmp_ret            = 0;
+
+  while(revd_size < length){
+    tmp_ret = recv(sock, data_buf + revd_size, length -revd_size, 0);
+
+    if(tmp_ret == 0) break;
+    if(tmp_ret < 0){
+      int errbuf = errno;
+      perror("TCP receive");
+      if(errbuf == EAGAIN){
+	// this is time out
+      }else{
+	// something wrong
+	std::cerr << "TCP error : " << errbuf << std::endl;
+      }
+
+      revd_size = tmp_ret;
+      break;
+    }
+
+    revd_size += tmp_ret;
+  }
+
+  return revd_size;
+}
+

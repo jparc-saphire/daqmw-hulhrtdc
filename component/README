@@ -1,0 +1,13 @@
+DAQMW component
+
+basic structre 
+
+7 READER components -> Merger -> BestEffortDispacher -> DAQLogger
+                                                     -> Monitor
+
+***READER compoents***
+1. MznHRTdcReader1
+
+all data are sent to "Merger" compoments. Merger works as event builder.
+
+

@@ -1,0 +1,10 @@
+How to run check_hrtdc.C
+
+run -b
+.L check_hrtdc.C
+check_hrtdc(16)
+(16 is run number)
+or
+check_hrtdc(16,"/home/xxx/yyy")
+where "/home/xxx/yyy" is the data file location
+
