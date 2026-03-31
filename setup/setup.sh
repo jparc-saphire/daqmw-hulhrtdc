@@ -24,6 +24,8 @@ mkdir -p "$BUILD_DIR"
 # 1. DNF パッケージのインストール
 # ============================================================
 echo "=== [1/9] Installing DNF packages ==="
+sudo dnf install -y epel-release
+sudo dnf config-manager --set-enabled crb
 sudo dnf install -y \
     boost-devel \
     python3-devel \
@@ -35,7 +37,13 @@ sudo dnf install -y \
     gcc-c++ \
     make \
     perl \
-    wget
+    wget \
+    autoconf \
+    automake \
+    libtool \
+    openssl-devel \
+    root \
+    root-net-http
 
 # ============================================================
 # 2. omniORB 4.2.5 のビルド・インストール
@@ -188,7 +196,13 @@ echo "TBB 2020.3 (libtbb.so.2) installed."
 # ============================================================
 echo ""
 echo "=== [7/9] Building DaqOperatorComp ==="
+sudo mkdir -p /usr/share/daqmw
+sudo cp -r "$BUILD_DIR/DAQ-Middleware-1.4.4/src/DaqOperator" /usr/share/daqmw/
+sudo cp -r "$BUILD_DIR/DAQ-Middleware-1.4.4/src/mk" /usr/share/daqmw/
+sudo sed -i 's/export DAQMWSRCROOT=/#export DAQMWSRCROOT=/' /usr/share/daqmw/DaqOperator/Makefile
+sudo sed -i 's|../lib/SiTCP/CPP/Sock|/usr/lib64/daqmw|g' /usr/share/daqmw/DaqOperator/Makefile
 cd /usr/share/daqmw/DaqOperator
+sudo make clean
 sudo make
 sudo mkdir -p /usr/libexec/daqmw
 sudo cp DaqOperatorComp /usr/libexec/daqmw/
@@ -218,8 +232,17 @@ echo "  Building daq-mw-app/util (libSiTcpRbcp, libgetaddr, libHexDump) ..."
 cd "$REPO_DIR/daq-mw-app/util"
 make
 
+echo "  Building standalone libraries for all components ..."
+for sa_dir in $(find "$REPO_DIR" -type d -name standalone -path "*/component/*/standalone"); do
+    echo "    Building $sa_dir ..."
+    mkdir -p "$sa_dir/lib"
+    make -C "$sa_dir" clean
+    make -C "$sa_dir"
+done
+
 echo "  Building all components ..."
 cd "$REPO_DIR/component"
+make clean
 make
 echo "DAQ components built."
 

@@ -20,6 +20,11 @@ component/*/autogen/*.h
 component/*/autogen/*.o
 component/*/autogen/DAQService.idl
 
+# Standalone library build artifacts
+component/*/standalone/lib/
+component/*/standalone/src/*.o
+component/*/standalone/src/*.d
+
 # Dependency files
 .depend
 
