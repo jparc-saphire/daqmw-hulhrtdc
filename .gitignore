@@ -25,6 +25,17 @@ component/*/standalone/lib/
 component/*/standalone/src/*.o
 component/*/standalone/src/*.d
 
+# Build artifacts
+lib/
+bin/
+vme_drs_v5.1_tdc/lib/
+vme_drs_v5.1_tdc/bin/
+vme_drs_v5.1_tdc/common/lib/
+vme_drs_v5.1_tdc/analyzer/bin/
+vme_drs_v5.1_tdc/daq/bin/
+Analyzer/lib/
+Analyzer/bin/
+
 # Dependency files
 .depend
 

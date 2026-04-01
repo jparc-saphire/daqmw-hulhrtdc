@@ -43,7 +43,10 @@ sudo dnf install -y \
     libtool \
     openssl-devel \
     root \
-    root-net-http
+    root-net-http \
+    zlib-devel \
+    xterm \
+    xauth
 
 # ============================================================
 # 2. omniORB 4.2.5 のビルド・インストール
@@ -199,6 +202,7 @@ echo "=== [7/9] Building DaqOperatorComp ==="
 sudo mkdir -p /usr/share/daqmw
 sudo cp -r "$BUILD_DIR/DAQ-Middleware-1.4.4/src/DaqOperator" /usr/share/daqmw/
 sudo cp -r "$BUILD_DIR/DAQ-Middleware-1.4.4/src/mk" /usr/share/daqmw/
+sudo cp -r "$BUILD_DIR/DAQ-Middleware-1.4.4/conf" /usr/share/daqmw/
 sudo sed -i 's/export DAQMWSRCROOT=/#export DAQMWSRCROOT=/' /usr/share/daqmw/DaqOperator/Makefile
 sudo sed -i 's|../lib/SiTCP/CPP/Sock|/usr/lib64/daqmw|g' /usr/share/daqmw/DaqOperator/Makefile
 cd /usr/share/daqmw/DaqOperator

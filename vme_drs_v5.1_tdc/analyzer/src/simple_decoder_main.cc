@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
   gDec.Open(nameInFile.c_str());
   if(!gDec.isGood()) return -1;
   
-  TFile fout(nameOutFile.c_str(), "RECREATE", "", ROOT::CompressionSettings(ROOT::kLZMA, 1));
+  TFile fout(nameOutFile.c_str(), "RECREATE", "", ROOT::CompressionSettings(ROOT::RCompressionSetting::EAlgorithm::kLZMA, 1));
   TTree tree("tree","tree");
   tree.Branch("TIC",   &data_cont.tic_count,      "TIC/I");
   tree.Branch("DD",    &data_cont.fl_double_data, "DD/I");

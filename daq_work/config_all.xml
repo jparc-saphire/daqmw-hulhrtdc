@@ -22,7 +22,7 @@
                     <hostAddr>127.0.0.1</hostAddr>
                     <hostPort>50000</hostPort>
                      <instName>MznHRTdcReader10.rtc</instName>
-                     <execPath>/home/e16/work/daq-hulhrtdc/component/MznHRTdcReader1/MznHRTdcReader1Comp</execPath>
+                     <execPath>/e88/u/e88daq/work/daqmw-hulhrtdc/component/MznHRTdcReader1/MznHRTdcReader1Comp</execPath>
                       <confFile>/tmp/daqmw/rtc.conf</confFile>
                       <startOrd>5</startOrd>
                       <inPorts>
@@ -53,7 +53,7 @@
                    <hostAddr>127.0.0.1</hostAddr>
                    <hostPort>50000</hostPort>
                    <instName>Merger0.rtc</instName>
-                   <execPath>/home/e16/work/daq-hulhrtdc/component/Merger/MergerComp</execPath>
+                   <execPath>/e88/u/e88daq/work/daqmw-hulhrtdc/component/Merger/MergerComp</execPath>
                    <confFile>/tmp/daqmw/rtc.conf</confFile>
                    <startOrd>4</startOrd>
                    <inPorts>
@@ -70,7 +70,7 @@
                    <hostAddr>127.0.0.1</hostAddr>
                    <hostPort>50000</hostPort>
                    <instName>BestEffortDispatcher0.rtc</instName>
-                   <execPath>/home/e16/work/daq-hulhrtdc/component/BestEffortDispatcher/BestEffortDispatcherComp</execPath>
+                   <execPath>/e88/u/e88daq/work/daqmw-hulhrtdc/component/BestEffortDispatcher/BestEffortDispatcherComp</execPath>
                    <confFile>/tmp/daqmw/rtc.conf</confFile>
                    <startOrd>3</startOrd>
                    <inPorts>
@@ -88,7 +88,7 @@
                     <hostAddr>127.0.0.1</hostAddr>
                     <hostPort>50000</hostPort>
                     <instName>Monitor0.rtc</instName>
-                    <execPath>/home/e16/work/daq-hulhrtdc/component/Monitor/MonitorComp</execPath>
+                    <execPath>/e88/u/e88daq/work/daqmw-hulhrtdc/component/Monitor/MonitorComp</execPath>
                     <confFile>/tmp/daqmw/rtc.conf</confFile>
                     <startOrd>2</startOrd>
                     <inPorts>
@@ -109,7 +109,7 @@
                     <hostAddr>127.0.0.1</hostAddr>
                     <hostPort>50000</hostPort>
                     <instName>DAQLogger0.rtc</instName>
-                    <execPath>/home/e16/work/daq-hulhrtdc/component/DAQLogger/DAQLoggerComp</execPath>
+                    <execPath>/e88/u/e88daq/work/daqmw-hulhrtdc/component/DAQLogger/DAQLoggerComp</execPath>
                     <confFile>/tmp/daqmw/rtc.conf</confFile>
                     <startOrd>1</startOrd>
                     <inPorts>

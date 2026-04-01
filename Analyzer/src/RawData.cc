@@ -6,7 +6,6 @@
 
 #include "RawData.hh"
 #include "GetNumberFromKernelEntropyPool.hh"
-#include "CLHEP/Random/Randomize.h"
 
 #include <algorithm>
 #include <iostream>

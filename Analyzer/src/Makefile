@@ -2,13 +2,15 @@
 #
 #
 ### CLHEP
-CLHEPDIR        = /cern/CLHEP
+#CLHEPDIR        = /cern/CLHEP
 #
-CLHEPINCDIR     = $(CLHEPDIR)/include
-CLHEPLIBDIR     = $(CLHEPDIR)/lib
+#CLHEPINCDIR     = $(CLHEPDIR)/include
+#CLHEPLIBDIR     = $(CLHEPDIR)/lib
 #
-CLHEPINCLUDE    = -I$(CLHEPINCDIR)
-CLHEPLIBS       = -L$(CLHEPLIBDIR) -lCLHEP
+#CLHEPINCLUDE    = -I$(CLHEPINCDIR)
+#CLHEPLIBS       = -L$(CLHEPLIBDIR) -lCLHEP
+CLHEPINCLUDE    = 
+CLHEPLIBS       = 
 #
 #
 ### RooT

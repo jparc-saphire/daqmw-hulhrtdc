@@ -61,7 +61,7 @@ daq(char* ip, rbcp_header *rbcpHeader,
     // check file ++++++++++++++++++++
     std::ifstream ifile(namebuf);
     if (!ifile.fail()) {
-      std::cout << "#D file " << ifile << " already exists. exit RUN " << run_no << std::endl;
+      std::cout << "#D file " << namebuf << " already exists. exit RUN " << run_no << std::endl;
       std::cout << "#D turn off DAQ mode" << std::endl;
       // Turn off DAQ mode
       fModule.WriteModule(DAQ::mid, DAQ::laddr_ExecDAQ, 0x0);

@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
   signal(SIGINT,closeFile);
 
   TFile f(rootFile.c_str(), "RECREATE", "", 
-	  ROOT::CompressionSettings(ROOT::kLZMA, 1));
+	  ROOT::CompressionSettings(ROOT::RCompressionSetting::EAlgorithm::kLZMA, 1));
   std::cout << "#D recreate root file : "
   	    << rootFile << std::endl;
   

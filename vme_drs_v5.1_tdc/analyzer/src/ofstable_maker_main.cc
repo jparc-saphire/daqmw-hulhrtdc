@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
   if(!gDec.isGood()) return -1;
 
   // Output ROOT file -------------------------------------------------
-  TFile fout(nameOutFile.c_str(), "RECREATE", "", ROOT::CompressionSettings(ROOT::kLZMA, 1));
+  TFile fout(nameOutFile.c_str(), "RECREATE", "", ROOT::CompressionSettings(ROOT::RCompressionSetting::EAlgorithm::kLZMA, 1));
   TH1F *hist_cell[NofChDrs][NofCell];
   for(int ch = 0; ch<NofChDrs; ++ch){
     for(int i = 0; i<NofCell; ++i){
