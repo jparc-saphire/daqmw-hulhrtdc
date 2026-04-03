@@ -17,6 +17,7 @@
 #include <memory>
 #include <errno.h>
 
+#include "UDPRBCP.hh"
 #include "FPGAModule.hh"
 
 #include "DaqComponentBase.h"
@@ -89,7 +90,8 @@ private:
   bool m_enDown{true};
   unsigned int m_windowMax{2047};
   unsigned int m_windowMin{0};
-  std::unique_ptr<FPGAModule> m_fModule;
+  std::unique_ptr<RBCP::UDPRBCP> m_udpRbcp;
+  std::unique_ptr<HUL::FPGAModule> m_fModule;
 
   component_header_t m_compHeader{ kMagic, 0 };
 

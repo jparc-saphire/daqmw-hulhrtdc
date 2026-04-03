@@ -31,17 +31,16 @@
                           <outPort>out0</outPort>
                       </outPorts>
                       <params>
-                          <param pid="timeout">2000</param>
+                          <!-- TCP recv timeout (sec). Was 2000; short value lets stop respond while debugging no-trigger runs. -->
+                          <param pid="timeout">10</param>
                           <param pid="debug">0</param>
 			  <!--<param pid="srcAddr">192.168.34.16</param>-->
                           <!--<param pid="srcAddr">192.168.10.21</param>-->
 			  <!--<param pid="srcAddr">192.168.34.32</param>-->
 			  <!--<param pid="srcAddr">192.168.34.33</param>-->
-			  <param pid="srcAddr">192.168.10.80</param>
+			  <param pid="srcAddr">192.168.10.90</param>
 			  <!--<param pid="srcAddr">192.168.10.16</param>-->
                           <param pid="srcPort">24</param>
-                          <!--<param pid="boardId">0xC0A8013A</param>-->
-			  <param pid="boardId">0x500AA8C0</param>
                           <param pid="window_max">330</param>   
                           <param pid="window_min">0</param>
                           <param pid="en_up">1</param>
@@ -118,7 +117,7 @@
                     <outPorts>
                     </outPorts>
                     <params>
-                       <param pid="dirName">/disk1/mrpcdaq/data/dat_TSCRPCR_202305</param>
+                       <param pid="dirName">/e88/w/junkdata</param>
                        <param pid="isLogging">yes</param>
                        <param pid="maxFileSizeInMegaByte">81920</param>
                     </params>

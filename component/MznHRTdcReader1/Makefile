@@ -10,14 +10,13 @@ SRCS += $(COMP_NAME)Comp.cpp
 #$(COMP_NAME)Comp: $(COMP_NAME)Comp.o
 
 CPPFLAGS += -Istandalone/src
-CPPFLAGS += -std=c++11
+CPPFLAGS += -std=c++14
 
 LDLIBS += -L$(DAQMW_LIB_DIR) -lSock \
   -L$(PWD)/standalone/lib -lBitDump -Wl,-rpath=$(PWD)/standalone/lib \
 	-L$(PWD)/standalone/lib -ldaq_funcs -Wl,-rpath=$(PWD)/standalone/lib \
-	-L$(PWD)/standalone/lib -lUDPRBCP -Wl,-rpath=$(PWD)/standalone/lib \
 	-L$(PWD)/standalone/lib -lFPGAModule -Wl,-rpath=$(PWD)/standalone/lib \
-	-L$(PWD)/standalone/lib -lmif_func -Wl,-rpath=$(PWD)/standalone/lib
+	-L$(PWD)/standalone/lib -lUDPRBCP -Wl,-rpath=$(PWD)/standalone/lib
 
 # Socket library
 #LDLIBS += -L$(DAQMW_LIB_DIR) -lSock

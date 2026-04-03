@@ -5,12 +5,12 @@
  *
  * @file DAQServiceStub.h 
  * @brief DAQService client stub header wrapper code
- * @date Tue Mar  7 19:02:54 2023 
+ * @date Wed Apr  1 21:36:20 2026 
  *
  */
 
-#ifndef DAQSERVICESTUB_H
-#define DAQSERVICESTUB_H
+#ifndef _DAQSERVICESTUB_H
+#define _DAQSERVICESTUB_H
 
 
 
@@ -32,8 +32,10 @@
 #  include "DAQService.h"
 #elif defined ORB_IS_ORBIT2
 #  include "DAQService-cpp-stubs.h"
+#elif defined ORB_IS_RTORB
+#  include "DAQService.h"
 #else
 #  error "NO ORB defined"
 #endif
 
-#endif // DAQSERVICESTUB_H
+#endif // _DAQSERVICESTUB_H

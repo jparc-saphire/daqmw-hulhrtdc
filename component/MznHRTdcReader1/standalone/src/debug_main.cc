@@ -1,76 +1,68 @@
+// Local smoke test: align with HULpackage HRTDC/bin/debug
 #include <iostream>
+#include <iomanip>
+#include <ios>
 #include <cstdio>
 
 #include "RegisterMap.hh"
-#include "network.hh"
-#include "UDPRBCP.hh"
-#include "CommandMan.hh"
 #include "FPGAModule.hh"
-#include "rbcp.h"
-#include "errno.h"
-#include "daq_funcs.hh"
-#include "mif_func.hh"
+#include "UDPRBCP.hh"
+#include "BctBusBridgeFunc.hh"
+#include "rbcp.hh"
 
-#include "sitcp_controller.hh"
+using namespace HUL;
 
-using namespace HRTDC_BASE;
-
-void
-ReadVersion(FPGAModule& fModule)
+int main(int argc, char* argv[])
 {
-  std::cout << "Version (BASE) : 0x" << std::hex 
-	    << fModule.ReadModule(HRTDC_BASE::BCT::mid,
-				  HRTDC_BASE::BCT::laddr_Version, 4)
-	    << std::endl;
-
-  if(en_up){
-    std::cout << "Version (MZN-U) : 0x" << std::hex 
-	      << ReadMIFModule(fModule, MIFU::mid,
-			       HRTDC_MZN::BCT::mid, HRTDC_MZN::BCT::laddr_Version, 4 )
-	      << std::endl;
-  }
-
-  if(en_down){
-    std::cout << "Version (MZN-D) : 0x" << std::hex 
-	      << ReadMIFModule(fModule, MIFD::mid,
-			       HRTDC_MZN::BCT::mid, HRTDC_MZN::BCT::laddr_Version, 4 )
-	      << std::endl;
-  }
-}
-
-int
-main(int argc, char* argv[])
-{
-  if(1 == argc){
-    std::cout << "Usage\n";
-    std::cout << "hul_main [IP address]" << std::endl;
+  if (1 == argc) {
+    std::cout << "Usage: debug [IP address]\n";
     return 0;
-  }// usage
-  
-  // body ------------------------------------------------------
-  char* board_ip = argv[1];
-  rbcp_header rbcpHeader;
-  rbcpHeader.type = UDPRBCP::rbcp_ver_;
-  rbcpHeader.id   = 0;
+  }
 
-  FPGAModule fModule(board_ip, udp_port, &rbcpHeader, 0);
-  // fModule.WriteModule(HRTDC_BASE::MIFU::mid, 
-  // 		      HRTDC_BASE::MIF::laddr_frst, 
-  // 		      0
-  // 		      );
-  // fModule.WriteModule(HRTDC_BASE::MIFD::mid, 
-  // 		      HRTDC_BASE::MIF::laddr_frst, 
-  // 		      0
-  // 		      );
+  std::string board_ip = argv[1];
 
-  //  Reset_SiTCP(board_ip, &rbcpHeader);
-  
-  ddr_initialize(fModule);
-  ReadVersion(fModule);
-  CalibLUT(fModule, HRTDC_BASE::MIFU::mid);
-  CalibLUT(fModule, HRTDC_BASE::MIFD::mid);
-  //  fModule.WriteModule(BCT::mid, BCT::laddr_Reset, 1);
+  RBCP::UDPRBCP udp_rbcp(board_ip, RBCP::gUdpPort, RBCP::UDPRBCP::kNoDisp);
+  HUL::FPGAModule fpga_module(udp_rbcp);
+  uint32_t bct_version = fpga_module.ReadModule(BCT::kAddrVersion, 4);
+  uint32_t major_version = (bct_version >> 8) & 0xff;
+  uint32_t minor_version = (bct_version) & 0xff;
+
+  std::cout << "#D: HUL firmware" << std::endl;
+  std::cout << std::hex;
+  std::cout << std::setfill('0') << std::right << "FW ID      : 0x" << std::setw(4)
+            << ((bct_version >> 16) & 0xffff) << std::endl;
+  std::cout << std::setfill(' ') << std::dec;
+  std::cout << "FW version : " << major_version << "." << minor_version << std::endl;
+
+  std::cout << "\n#D: Mezzanine firmware" << std::endl;
+
+  if (HRTDC_BASE::kEnSlotUp) {
+    uint32_t mv = ReadModuleIn2ndryFPGA(fpga_module, HRTDC_BASE::BBP::kUpper,
+                                        HRTDC_MZN::BCT::kAddrVersion, 4);
+    major_version = (mv >> 8) & 0xff;
+    minor_version = (mv) & 0xff;
+
+    std::cout << std::hex;
+    std::cout << std::setfill('0') << std::right << "FW ID (MZN-U)     : 0x"
+              << std::setw(4) << ((mv >> 16) & 0xffff) << std::endl;
+    std::cout << std::setfill(' ') << std::dec;
+    std::cout << "FW version (MZN-U): " << major_version << "." << minor_version
+              << std::endl;
+  }
+
+  if (HRTDC_BASE::kEnSlotDown) {
+    uint32_t mv = ReadModuleIn2ndryFPGA(fpga_module, HRTDC_BASE::BBP::kLower,
+                                        HRTDC_MZN::BCT::kAddrVersion, 4);
+    major_version = (mv >> 8) & 0xff;
+    minor_version = (mv) & 0xff;
+
+    std::cout << std::hex;
+    std::cout << std::setfill('0') << std::right << "FW ID (MZN-D)     : 0x"
+              << std::setw(4) << ((mv >> 16) & 0xffff) << std::endl;
+    std::cout << std::setfill(' ') << std::dec;
+    std::cout << "FW version (MZN-D): " << major_version << "." << minor_version
+              << std::endl;
+  }
 
   return 0;
-
-}// main
+}

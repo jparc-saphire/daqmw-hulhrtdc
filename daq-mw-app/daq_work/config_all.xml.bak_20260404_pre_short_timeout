@@ -31,8 +31,7 @@
                           <outPort>out0</outPort>
                       </outPorts>
                       <params>
-                          <!-- TCP recv timeout (sec). Was 2000; short value lets stop respond while debugging no-trigger runs. -->
-                          <param pid="timeout">10</param>
+                          <param pid="timeout">2000</param>
                           <param pid="debug">0</param>
 			  <!--<param pid="srcAddr">192.168.34.16</param>-->
                           <!--<param pid="srcAddr">192.168.10.21</param>-->

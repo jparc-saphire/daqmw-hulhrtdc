@@ -5,7 +5,7 @@
  *
  * @file DAQServiceStub.cpp 
  * @brief DAQService client stub wrapper code
- * @date Tue Mar  7 19:02:54 2023 
+ * @date Wed Apr  1 21:36:20 2026 
  *
  */
 
@@ -20,6 +20,10 @@
 #  include "DAQService.cc"
 #elif defined ORB_IS_ORBIT2
 #  include "DAQService-cpp-stubs.cc"
+#elif defined ORB_IS_RTORB
+#  include "OpenRTM-aist-decls.h"
+#  include "DAQService-common.c"
+#  include "DAQService-stubs.c"
 #else
 #  error "NO ORB defined"
 #endif

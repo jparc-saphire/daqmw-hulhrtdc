@@ -17,15 +17,12 @@
 #include <functional>
 #include <sstream>
 #include <thread> // for sleep
+#include <memory>
 
-#include "standalone/src/UDPRBCP.hh"
-#include "standalone/src/RegisterMap.hh"
-#include "standalone/src/rbcp.h"
-#include "standalone/src/network.hh"
-#include "standalone/src/daq_funcs.hh"
-#include "standalone/src/mif_func.hh"
-
-#include "cpp11_make_unique.hh"
+#include "UDPRBCP.hh"
+#include "RegisterMap.hh"
+#include "BctBusBridgeFunc.hh"
+#include "daq_funcs.hh"
 
 #include "MznHRTdcReader1.h"
 
@@ -55,10 +52,6 @@ static const char* mzn_hrtdc_reader_spec[] =
 
 
 //______________________________________________________________________________
-rbcp_header rbcpHeader;
-
-
-//______________________________________________________________________________
 MznHRTdcReader1::MznHRTdcReader1(RTC::Manager* manager)
   : DAQMW::DaqComponentBase(manager),
     m_OutPort("out1", m_out_data),
@@ -72,9 +65,6 @@ MznHRTdcReader1::MznHRTdcReader1(RTC::Manager* manager)
   init_command_port();
   init_state_table();
   set_comp_name("MznHRTdcReader1");
-
-  rbcpHeader.type = UDPRBCP::rbcp_ver_;
-  rbcpHeader.id   = 0;
 }
 
 //______________________________________________________________________________
@@ -110,87 +100,82 @@ int MznHRTdcReader1::daq_configure()
   paramList = m_daq_service0.getCompParams();
   parse_params(paramList);
 
-  if (!m_fModule) {
+  using namespace HUL;
+  using namespace HUL::HRTDC_BASE;
+
+  if (!m_udpRbcp || !m_fModule) {
     std::cout << " create module " << std::endl;
-    m_fModule = make_unique<FPGAModule>(m_srcAddr.c_str(), m_udpPort, &rbcpHeader, 0);
+    m_udpRbcp = std::make_unique<RBCP::UDPRBCP>(
+        m_srcAddr, static_cast<uint32_t>(m_udpPort), RBCP::UDPRBCP::kNoDisp);
+    m_fModule = std::make_unique<HUL::FPGAModule>(*m_udpRbcp);
   }
-  // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  // HUL base module reset
-  m_fModule->WriteModule(HRTDC_BASE::BCT::mid, HRTDC_BASE::BCT::laddr_Reset, 0);
+
+  m_fModule->WriteModule(HUL::BCT::kAddrReset, 0);
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  // HUL mezzanine force reset assert 
-  if (m_enUp)   m_fModule->WriteModule(HRTDC_BASE::MIFU::mid, HRTDC_BASE::MIF::laddr_frst, 1);
-  if (m_enDown) m_fModule->WriteModule(HRTDC_BASE::MIFD::mid, HRTDC_BASE::MIF::laddr_frst, 1);
+  if (m_enUp) {
+    m_fModule->WriteModule(DCT::kAddrCtrlReg, 1);
+    m_fModule->WriteModule(DCT::kAddrCtrlReg, DCT::kRegFRstU);
+    m_fModule->WriteModule(DCT::kAddrCtrlReg, 0);
+  }
+  if (m_enDown) {
+    m_fModule->WriteModule(DCT::kAddrCtrlReg, 1);
+    m_fModule->WriteModule(DCT::kAddrCtrlReg, DCT::kRegFRstD);
+    m_fModule->WriteModule(DCT::kAddrCtrlReg, 0);
+  }
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  // HUL mezzanine force reset deassert 
-  if (m_enUp)   m_fModule->WriteModule(HRTDC_BASE::MIFU::mid, HRTDC_BASE::MIF::laddr_frst, 0);
-  if (m_enDown) m_fModule->WriteModule(HRTDC_BASE::MIFD::mid, HRTDC_BASE::MIF::laddr_frst, 0);
-  
-  // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   std::cout << "set registers " << std::endl;
 
-  { // check firmware version
-    auto fwBase = m_fModule->ReadModule(HRTDC_BASE::BCT::mid, HRTDC_BASE::BCT::laddr_Version, 4);
-    std::cout << "#D Fimrware (BASE): " << std::hex << fwBase << std::dec << std::endl;
-    //2023/3/7 sako
-    //def
-    /*
-    auto fwMU = ReadMIFModule(*m_fModule, HRTDC_BASE::MIFU::mid,
-			      HRTDC_MZN::BCT::mid, HRTDC_MZN::BCT::laddr_Version, 4);
-    std::cout << "#D Firmware (Mezzanine U): " << std::hex << fwMU << std::dec << std::endl;
-    */
+  {
+    auto fwBase = m_fModule->ReadModule(HUL::BCT::kAddrVersion, 4);
+    std::cout << "#D Firmware (BASE): " << std::hex << fwBase << std::dec << std::endl;
 
-    //sako
     if (m_enUp) {
-      auto fwMU = ReadMIFModule(*m_fModule, HRTDC_BASE::MIFU::mid,
-				HRTDC_MZN::BCT::mid, HRTDC_MZN::BCT::laddr_Version, 4);
-      std::cout << "#D Firmware (Mezzanine U): " << std::hex << fwMU << std::dec << std::endl;
+      auto fwMU = ReadModuleIn2ndryFPGA(*m_fModule, BBP::kUpper,
+                                        HRTDC_MZN::BCT::kAddrVersion, 4);
+      std::cout << "#D Firmware (Mezzanine U): " << std::hex << fwMU << std::dec
+                << std::endl;
     } else {
       std::cout << "No Mezzanine U" << std::endl;
     }
-    //def
-    //2023/3/7
-    /*
-    auto fwMD = ReadMIFModule(*m_fModule, HRTDC_BASE::MIFD::mid,
-    			      HRTDC_MZN::BCT::mid, HRTDC_MZN::BCT::laddr_Version, 4);
-    std::cout << "#D Firmware (Mezzanine D): " << std::hex << fwMD << std::dec << std::endl;
-    */
-    //2023/3/7 sako 
+
     if (m_enDown) {
-      auto fwMD = ReadMIFModule(*m_fModule, HRTDC_BASE::MIFD::mid,
-				HRTDC_MZN::BCT::mid, HRTDC_MZN::BCT::laddr_Version, 4);
-      std::cout << "#D Firmware (Mezzanine D): " << std::hex << fwMD << std::dec << std::endl;
+      auto fwMD = ReadModuleIn2ndryFPGA(*m_fModule, BBP::kLower,
+                                        HRTDC_MZN::BCT::kAddrVersion, 4);
+      std::cout << "#D Firmware (Mezzanine D): " << std::hex << fwMD << std::dec
+                << std::endl;
     } else {
       std::cout << "No Mezzanine D" << std::endl;
     }
-
   }
 
   std::cout << "set registers sel trig" << std::endl;
-  // set sel trig
-  auto sel_trig = HRTDC_BASE::TRM::reg_L1Ext;
-  m_fModule->WriteModule(HRTDC_BASE::TRM::mid, HRTDC_BASE::TRM::laddr_sel_trig, sel_trig);
+  uint32_t sel_trig = TRM::kRegL1Ext;
+  m_fModule->WriteModule(TRM::kAddrSelectTrigger, sel_trig, 2);
 
-  std::cout << "set registers evb reset (reset event counter)" << std::endl;
-  // set search windows
-  if (m_enUp)   set_tdc_window(m_windowMax, m_windowMin, *m_fModule, HRTDC_BASE::MIFU::mid);
-  if (m_enDown) set_tdc_window(m_windowMax, m_windowMin, *m_fModule, HRTDC_BASE::MIFD::mid);
-  
-  // set extL1 from NIMIN1
-  m_fModule->WriteModule(HRTDC_BASE::IOM::mid, HRTDC_BASE::IOM::laddr_extL1,  HRTDC_BASE::IOM::reg_i_nimin1);
-  // m_fModule->WriteModule(HRTDC_BASE::IOM::mid, HRTDC_BASE::IOM::laddr_extL2,  HRTDC_BASE::IOM::reg_i_nimin2);
-  // m_fModule->WriteModule(HRTDC_BASE::IOM::mid, HRTDC_BASE::IOM::laddr_extClr, HRTDC_BASE::IOM::reg_i_nimin3);
-  
-  
-  //while (0 > (m_sock = ConnectSocket(m_srcAddr.c_str()))) {
-  //  std::cout << "#D TCP socket connection fail : " << m_srcAddr << std::endl;
-  //}
-  if(m_sock == NULL){
+  std::cout << "set registers (leading/trailing blocks, search windows)" << std::endl;
+  uint32_t en_blocks =
+      HRTDC_MZN::DCT::kEnLeading | HRTDC_MZN::DCT::kEnTrailing;
+  if (m_enUp) {
+    WriteModuleIn2ndryFPGA(*m_fModule, BBP::kUpper, HRTDC_MZN::DCT::kAddrEnBlocks,
+                           en_blocks, 1);
+  }
+  if (m_enDown) {
+    WriteModuleIn2ndryFPGA(*m_fModule, BBP::kLower, HRTDC_MZN::DCT::kAddrEnBlocks,
+                           en_blocks, 1);
+  }
+  if (m_enUp) {
+    SetTdcWindow(m_windowMax, m_windowMin, *m_fModule, BBP::kUpper);
+  }
+  if (m_enDown) {
+    SetTdcWindow(m_windowMax, m_windowMin, *m_fModule, BBP::kLower);
+  }
+
+  m_fModule->WriteModule(IOM::kAddrExtL1, IOM::kReg_i_Nimin1);
+
+  if (m_sock == NULL) {
     try {
-      // Create socket and connect to data server.
-      // Sock() is defined (DAQ-Middleware-HOME)/src/lib/SiTCP/CPP/Sock/Sock.h
       m_sock = new DAQMW::Sock();
       std::cout << "conecting socket ... " << std::endl;
       m_sock->connect(m_srcAddr, m_srcPort);
@@ -203,40 +188,43 @@ int MznHRTdcReader1::daq_configure()
     }
   }
   std::cout << "socket connected" << std::endl;
-  
+
   std::cout << "set receive/read timeout " << m_recvtimeout << " sec" << std::endl;
   m_sock->setOptRecvTimeOut(m_recvtimeout);
 
-  // evb reset
-  m_fModule->WriteModule(HRTDC_BASE::DCT::mid, HRTDC_BASE::DCT::laddr_evb_reset, 0x1);
+  m_fModule->WriteModule(DCT::kAddrResetEvb, 0);
 
-  std::cout << __FILE__ << " L." << __LINE__ << ": set registers tdc widnow " 
-	    << "mezzanine (U, D) = (" << m_enUp << ", " << m_enDown << ")"
-	    << " (min, max) = (" << m_windowMin << ", " << m_windowMax  << ")"
-	    << std::endl;
+  std::cout << __FILE__ << " L." << __LINE__ << ": set registers tdc window "
+            << "mezzanine (U, D) = (" << m_enUp << ", " << m_enDown << ")"
+            << " (min, max) = (" << m_windowMin << ", " << m_windowMax << ")"
+            << std::endl;
 
-  ddr_initialize(*m_fModule, m_enUp, m_enDown);
+  DdrInitialize(*m_fModule, m_enUp, m_enDown);
 
-  if (m_enUp)   CalibLUT(*m_fModule, HRTDC_BASE::MIFU::mid);
-  if (m_enDown) CalibLUT(*m_fModule, HRTDC_BASE::MIFD::mid);
+  if (m_enUp) {
+    CalibLUT(*m_fModule, BBP::kUpper);
+  }
+  if (m_enDown) {
+    CalibLUT(*m_fModule, BBP::kLower);
+  }
 
-  auto tdc_ctrl = 0;
+  uint32_t tdc_ctrl = 0;
   if (m_enUp) {
     std::cout << "en up" << std::endl;
-    WriteMIFModule(*m_fModule, HRTDC_BASE::MIFU::mid, 
-                   HRTDC_MZN::TDC::mid, HRTDC_MZN::TDC::laddr_controll, tdc_ctrl, 1);
-    WriteMIFModule(*m_fModule, HRTDC_BASE::MIFU::mid,
-		   HRTDC_MZN::DCT::mid, HRTDC_MZN::DCT::laddr_gate, 1, 1);    
+    WriteModuleIn2ndryFPGA(*m_fModule, BBP::kUpper, HRTDC_MZN::TDC::kAddrControll,
+                           tdc_ctrl, 1);
+    WriteModuleIn2ndryFPGA(*m_fModule, BBP::kUpper, HRTDC_MZN::DCT::kAddrGate, 1,
+                           1);
   }
-  if(m_enDown) {
+  if (m_enDown) {
     std::cout << "en down" << std::endl;
-    WriteMIFModule(*m_fModule, HRTDC_BASE::MIFD::mid,
-		   HRTDC_MZN::TDC::mid, HRTDC_MZN::TDC::laddr_controll, tdc_ctrl, 1);
-    WriteMIFModule(*m_fModule, HRTDC_BASE::MIFD::mid,
-		   HRTDC_MZN::DCT::mid, HRTDC_MZN::DCT::laddr_gate, 1, 1);
-  } 
-  m_fModule->WriteModule(HRTDC_BASE::DCT::mid, HRTDC_BASE::DCT::laddr_gate, 1);
-  m_fModule->WriteModule(HRTDC_BASE::DCT::mid, HRTDC_BASE::DCT::laddr_gate, 1);
+    WriteModuleIn2ndryFPGA(*m_fModule, BBP::kLower, HRTDC_MZN::TDC::kAddrControll,
+                           tdc_ctrl, 1);
+    WriteModuleIn2ndryFPGA(*m_fModule, BBP::kLower, HRTDC_MZN::DCT::kAddrGate, 1,
+                           1);
+  }
+  m_fModule->WriteModule(DCT::kAddrDaqGate, 1);
+  m_fModule->WriteModule(DCT::kAddrDaqGate, 1);
 
   std::cout << "***************************" << std::endl;
   std::cout << "MznHRTdcReader1 Initialized" << std::endl;
@@ -350,16 +338,16 @@ int MznHRTdcReader1::daq_stop()
   std::cerr << "*** MznHRTdcReader1::stop" << std::endl;
 
   m_sock->setOptRecvTimeOut(2);
-  m_fModule->WriteModule(HRTDC_BASE::DCT::mid, HRTDC_BASE::DCT::laddr_gate,  0);
+  m_fModule->WriteModule(HUL::HRTDC_BASE::DCT::kAddrDaqGate, 0);
 
-  if(m_enUp){
-    WriteMIFModule(*m_fModule, HRTDC_BASE::MIFU::mid,
-		   HRTDC_MZN::DCT::mid, HRTDC_MZN::DCT::laddr_gate, 0, 1);
+  if (m_enUp) {
+    WriteModuleIn2ndryFPGA(*m_fModule, HUL::HRTDC_BASE::BBP::kUpper,
+                           HUL::HRTDC_MZN::DCT::kAddrGate, 0, 1);
   }
 
-  if(m_enDown){
-    WriteMIFModule(*m_fModule, HRTDC_BASE::MIFD::mid,
-		   HRTDC_MZN::DCT::mid, HRTDC_MZN::DCT::laddr_gate, 0, 1);  
+  if (m_enDown) {
+    WriteModuleIn2ndryFPGA(*m_fModule, HUL::HRTDC_BASE::BBP::kLower,
+                           HUL::HRTDC_MZN::DCT::kAddrGate, 0, 1);
   }
 
   size_t thrownSize=0;
@@ -420,10 +408,10 @@ int MznHRTdcReader1::read_data_from_detectors()
   if (status == DAQMW::Sock::ERROR_FATAL) {
     std::cerr << "### ERROR: m_sock->readAll header" << std::endl;
     fatal_error_report(USER_DEFINED_ERROR1, "SOCKET FATAL ERROR");
-  }else if (status == DAQMW::Sock::ERROR_TIMEOUT) {
+  } else if (status == DAQMW::Sock::ERROR_TIMEOUT) {
     std::cerr << "### Timeout: m_sock->readAll header" << std::endl;
-    //fatal_error_report(USER_DEFINED_ERROR2, "SOCKET TIMEOUT");
-  }else {
+    return 0;
+  } else {
     received_data_size += sizeofHeader;
   }
 
@@ -541,15 +529,13 @@ int MznHRTdcReader1::daq_run()
     m_recv_byte_size = read_data_from_detectors();
     if (m_recv_byte_size > 0) {
       set_data(m_recv_byte_size); // set data to OutPort Buffer
+      if (write_OutPort() < 0) {
+        ;     // Timeout. do nothing.
+      } else {
+        inc_sequence_num();
+        inc_total_data_size(m_recv_byte_size);
+      }
     }
-  }
-
-  if (write_OutPort() < 0) {
-    ;     // Timeout. do nothing.
-  }
-  else {    // OutPort write successfully done
-    inc_sequence_num();                     // increase sequence num.
-    inc_total_data_size(m_recv_byte_size);  // increase total data byte size
   }
 
   return 0;

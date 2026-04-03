@@ -5,7 +5,7 @@
  *
  * @file DAQServiceSkel.cpp 
  * @brief DAQService server skeleton wrapper
- * @date Tue Mar  7 19:02:54 2023 
+ * @date Wed Apr  1 21:36:20 2026 
  *
  */
 
@@ -23,6 +23,12 @@
 #elif defined ORB_IS_ORBIT2
 #  include "DAQService-cpp-stubs.cc"
 #  include "DAQService-cpp-skels.cc"
+#elif defined ORB_IS_RTORB
+#  include "OpenRTM-aist-decls.h"
+#  include "DAQService-common.c"
+#  include "DAQService-stubs.c"
+#  include "DAQService-skels.c"
+#  include "DAQService-skelimpl.c"
 #else
 #  error "NO ORB defined"
 #endif

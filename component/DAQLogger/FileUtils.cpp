@@ -261,6 +261,12 @@ int FileUtils::copy_logfiles(std::string dir_name)
   dir_name += "/log";
   std::string daqmwtmpdir = "/tmp/daqmw";
   std::cout << __FUNCTION__ << " Copying log files under " << dir_name << std::endl;
+  try {
+    boost::filesystem::create_directories(boost::filesystem::path(dir_name));
+  } catch (const boost::filesystem::filesystem_error& ex) {
+    std::cerr << "copy_logfiles: create_directories: " << ex.what() << std::endl;
+    return -1;
+  }
   //copy log files from /tmp/daqmw
   std::string datafilename = gen_file_name();
   for(int i =0;i<4;i++) datafilename.erase(datafilename.size()-1);
@@ -283,14 +289,21 @@ int FileUtils::copy_logfiles(std::string dir_name)
     const boost::filesystem::path LogAtTmpdir = daqmwtmpdir + slogname.at(icomp);
     std::string lognamecomp = dir_name + slogname.at(icomp) + datafilename;
     const boost::filesystem::path LogToCopy = lognamecomp;
-    try{
-      boost::filesystem::copy_file(LogAtTmpdir,LogToCopy);
-    }catch( boost::filesystem::filesystem_error& ex){
-      std::cout << ex.what() << std::endl;
-      throw;
+    if (!boost::filesystem::is_regular_file(LogAtTmpdir)) {
+      std::cout << "copy_logfiles: skip (missing or not a file) " << LogAtTmpdir
+                << std::endl;
+      continue;
+    }
+    try {
+      boost::filesystem::copy_file(LogAtTmpdir, LogToCopy,
+          boost::filesystem::copy_options::overwrite_existing);
+    } catch (const boost::filesystem::filesystem_error& ex) {
+      std::cerr << "copy_logfiles: copy failed (continuing): " << ex.what()
+                << std::endl;
+      continue;
     }
     std::string cmd = "chmod 444 " + lognamecomp;
-    int sysout = system(cmd.c_str());
+    (void)system(cmd.c_str());
   }
 
   return 0;

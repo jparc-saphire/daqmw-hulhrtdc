@@ -5,12 +5,12 @@
  *
  * @file DAQServiceSkel.h 
  * @brief DAQService server skeleton header wrapper code
- * @date Tue Mar  7 19:02:54 2023 
+ * @date Wed Apr  1 21:36:20 2026 
  *
  */
 
-#ifndef DAQSERVICESKEL_H
-#define DAQSERVICESKEL_H
+#ifndef _DAQSERVICESKEL_H
+#define _DAQSERVICESKEL_H
 
 
 
@@ -34,8 +34,10 @@
 #elif defined ORB_IS_ORBIT2
 #  include "/DAQService-cpp-stubs.h"
 #  include "/DAQService-cpp-skels.h"
+#elif defined ORB_IS_RTORB
+#  include "DAQService.h"
 #else
 #  error "NO ORB defined"
 #endif
 
-#endif // DAQSERVICESKEL_H
+#endif // _DAQSERVICESKEL_H
